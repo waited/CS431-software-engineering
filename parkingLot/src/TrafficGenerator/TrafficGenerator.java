@@ -5,6 +5,7 @@ import java.net.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import utils.ConnectionData;
 import utils.ConnectorInfo;
 import utils.Traffic;
 
@@ -18,7 +19,7 @@ public class TrafficGenerator {
 	protected static ServerSocket timeKeeperSocket;
 	protected static ArrayList<ConnectorInfo> gateSocketArray;
 	protected static ArrayList<ConnectorInfo> timeKeeperArray;
-	protected static String timekeeper = "";
+	protected static String timekeeper = "", timeChecker = ""; ;
  	protected static Thread accepterThread, senderThread, TKaccepterThread;
 	protected static ArrayList<String> plateDB;
 	protected static final String START = "START", END = "END"; 
@@ -81,18 +82,18 @@ public class TrafficGenerator {
 		 * actual program begins.
 		 */
 		try{
-			serverSocket = new ServerSocket(utils.ConnectionData.portForTG); //open up port number.
+			serverSocket = new ServerSocket(ConnectionData.portForTG); //open up port number.
 		} catch (IOException e) {
 			System.out.println("socket open error for main port, please change port number.");
 			System.exit(1);
 		}
 		try{
-			timeKeeperSocket = new ServerSocket(utils.ConnectionData.portForTime); //open up port number for time sending.
+			timeKeeperSocket = new ServerSocket(ConnectionData.portForTime); //open up port number for time sending.
 		} catch (IOException e) {
 			System.out.println("socket open error for timeKeeper port, please change port number.");
 			System.exit(1);
 		}
-			
+			//System.out.println("reach");
 		gateAccepter accepter = new gateAccepter(); //Thread for get connection.
 		accepterThread = new Thread(accepter);
 		accepterThread.start();
@@ -150,6 +151,7 @@ public class TrafficGenerator {
 	protected static void timeSender(String note){
 		for(int i=0; i<timeKeeperArray.size(); i++){
 			timeKeeperArray.get(i).PW.println(note+"|"+timekeeper);
+			//System.out.println(note+"|"+timekeeper);
 		}
 	}
 	
@@ -204,6 +206,7 @@ class trafficSender extends TrafficGenerator implements Runnable{
 		SimpleDateFormat SDF = new SimpleDateFormat("HH:mm:ss"); // time format as HH:mm:ss.
 		SimpleDateFormat SDFofOut = new SimpleDateFormat("HH:mm:ss"); //time format as HH:mm.
 		SimpleDateFormat SDFofHour = new SimpleDateFormat("HH"); // time format as HH.
+		SimpleDateFormat SDFofMin = new SimpleDateFormat("mm"); // time format as HH.
 		
 		while(true){
 			
@@ -217,6 +220,9 @@ class trafficSender extends TrafficGenerator implements Runnable{
 		}
 		
 		calendar.set(0,0,0,startHour,startMin,startSec);
+		Date date = calendar.getTime();
+		String generatedTime = SDF.format(date);
+		timekeeper = generatedTime;
 		
 		timeSender(START);
 		for(int i=0; i<duration+2; i++){
@@ -225,10 +231,11 @@ class trafficSender extends TrafficGenerator implements Runnable{
 			
 			if(percentageOfGeneratingCar>=currentPercenetageOfGeneratingCar){
 				
-				Date date = calendar.getTime();
-				String generatedTime = SDF.format(date);
+				date = calendar.getTime();
+				generatedTime = SDF.format(date);
 				
 				int currentHour = Integer.valueOf(SDFofHour.format(date));
+				int currentMin = Integer.valueOf(SDFofMin.format(date));
 				int ptr = 0;
 				
 				/*
@@ -247,16 +254,16 @@ class trafficSender extends TrafficGenerator implements Runnable{
 					
 					while(true){ //Generate expecting out time.
 						outTimeInHour = random.nextInt(defaultLotClosedTime+1);
-						if(outTimeInHour<startHour){
+						if(outTimeInHour<currentHour){
 							continue;
 						} else {
 							if(outTimeInHour != defaultLotClosedTime){
 								outTimeInMin = random.nextInt(60);
-							} else if(outTimeInHour == startHour) {
+							} else if(outTimeInHour == currentHour) {
 								while(true)
 								{
 									outTimeInMin = random.nextInt(60);
-									if(outTimeInMin<=startMin){
+									if(outTimeInMin<=currentMin){
 										continue;
 									} else {
 										break;
@@ -283,7 +290,6 @@ class trafficSender extends TrafficGenerator implements Runnable{
 					if(gateSocketArray.size() > 0){
 						splitter = random.nextInt(gateSocketArray.size());
 					}
-					
 					while(gateSocketArray.size() <= 0){ // if no connection made, i will keep wait until any gate connect.
 						try {
 							//System.out.println(gateSocketArray.size());
@@ -302,7 +308,20 @@ class trafficSender extends TrafficGenerator implements Runnable{
 					try {
 						//System.out.println(Splitter);
 						gateSocketArray.get(splitter).OOS.writeObject(taraffic); //sending out the object to gate.
-						timeSender(); // send time to every one to need to know.				
+						
+						String timeCheckerTemp ="";
+						
+						if(timeChecker.length()>1){
+							timeCheckerTemp = timeChecker.substring(0, timeChecker.lastIndexOf(":"));
+						}
+						
+						String timeKeeperTemp = timekeeper.substring(0, timekeeper.lastIndexOf(":"));
+						if(!timeCheckerTemp.equalsIgnoreCase(timeKeeperTemp)){
+							//System.out.println(timeCheckerTemp+" "+timeKeeperTemp);
+							timeSender(); // send time to every one to need to know.
+							timeChecker = timekeeper;
+						}
+											
 					} catch (SocketException se) {
 						try {
 							gateSocketArray.get(splitter).socket.close(); // if one of gate disconnected, the socket will drop.
@@ -320,6 +339,12 @@ class trafficSender extends TrafficGenerator implements Runnable{
 		}
 			int minutePointer = initialDuration*i;
 			calendar.set(0,0,0,startHour,startMin,startSec+minutePointer);
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	
 		timeSender(END); //sending the end time to send traffic.

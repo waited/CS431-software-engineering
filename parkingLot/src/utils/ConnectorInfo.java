@@ -15,7 +15,6 @@ public class ConnectorInfo {
 	public Socket socket;
 	public PrintWriter PW;
 	public ObjectOutputStream OOS;
-	public ObjectInputStream OIS;
 	
 	public ConnectorInfo(Socket socket){
 		this.socket = socket;
@@ -23,7 +22,6 @@ public class ConnectorInfo {
 			//DIS = new DataInputStream(socket.getInputStream());
 			PW = new PrintWriter(socket.getOutputStream(), true);
 			OOS = new ObjectOutputStream(socket.getOutputStream());
-			OIS = new ObjectInputStream(socket.getInputStream());
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

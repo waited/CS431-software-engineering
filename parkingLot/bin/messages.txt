@@ -1,0 +1,28 @@
+Messages
+
+Gate-2-Manager:
+1. Car arriving
+2. Car leaving
+3. Token information
+
+
+Manager-2-Gate:
+1. No redistribution
+2. Global redistribution
+3. Each gate has its own budget and trades for token
+
+
+
+IMPLEMENTATION
+
+Order of Incoming messages for gate:
+(command)	>> char b = next input is a double representing the budget;
+(message)	>> double
+(command)	>> char t = next input is a int representing the number of tokens received and then that number of tokens will be sent;
+(message)	>> int
+
+Order of Incoming messages for gate-receiver:
+(command)	>> char b = next input is a double representing the budget;
+(message)	>> double
+(command)	>> char t = next input is a int representing the number of tokens received
+(message)	>> int
